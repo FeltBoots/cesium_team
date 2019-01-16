@@ -107,40 +107,44 @@ var options = [ {
     text : 'Aircraft',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumAir/Cesium_Air.glb');
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Ground Vehicle',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/GroundVehicle/GroundVehicle.glb');
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Hot Air Balloon',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumBalloon/CesiumBalloon.glb');
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Milk Truck',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMilkTruck/CesiumMilkTruck-kmc.glb');
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Skinned Character',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMan/Cesium_Man.glb');
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'point',
     onselect : function() {
         addEntity(lastClickedPosition);
-        document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+        chooseDefaultOptionAndShowToolbar();
     }
 }];
 
+function chooseDefaultOptionAndShowToolbar(){
+    document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+    document.getElementById('toolbar').style.visibility = "visible";
+}
 
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
@@ -273,9 +277,13 @@ function changeMenuValue(property, newValue) {
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
     if (Cesium.defined(picked)) {
+        document.getElementById('toolbar').style.visibility = "visible";
+
         var id = Cesium.defaultValue(picked.id, picked.primitive.id);
         if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
+            console.log('here');
+
             for (var prop in viewModel) {
                 if (entity[prop + '_model'])
                     changeMenuValue(prop, entity[prop + '_model']);
@@ -284,6 +292,8 @@ handler.setInputAction(function(click) {
             viewModel.colorBlendAmountEnabled = entity.name === "model" &&
                 entity.colorBlendAmount === "MIX";
         }
+    } else {
+        document.getElementById('toolbar').style.visibility = "hidden";
     }
 
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
