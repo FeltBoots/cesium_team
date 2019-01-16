@@ -19,6 +19,7 @@
     </script>
     <style>
         @import url(Cesium/Build/Cesium/Widgets/widgets.css);
+        @import url(Cesium/Apps/Sandcastle/templates/bucket.css);
 
         html, body, #cesiumContainer {
             width: 100%;
@@ -27,19 +28,93 @@
             padding: 0;
             overflow: hidden;
         }
+
+        #toolbar {
+            background: rgba(42, 42, 42, 0.8);
+            padding: 4px;
+            border-radius: 4px;
+            /*display: none;*/
+        }
+
+        #toolbar input {
+            vertical-align: middle;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+        #toolbar .header {
+            font-weight: bold;
+        }
+
+        #shapeEditMenu {
+            position: absolute;
+            display: none;
+
+            /*top: 80px;*/
+            height: 50px;
+            width: 125px;
+
+            background: rgba(42, 42, 42, 0.8);
+            border: 1px solid #888;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-<style>
-    @import url(Cesium/Apps/Sandcastle/templates/bucket.css);
-</style>
+
 <div id="cesiumContainer" class="fullSize"></div>
 <div id="loadingOverlay"><h1>Loading...</h1></div>
-<div id="toolbar"></div>
-<!--<div id="animation-button" style="position: fixed; top: 80px; left: 10px;">
-    <button type="button" onclick="getBaseLayerList()">Start animation</button>
-    <button type="button" onclick="getArtefactsList()">Get artefacts</button>
-</div>-->
-<script src="js/cesium-overlay.js"></script>
+
+<div id="toolbar">
+    <table><tbody>
+    <tr><td class="header">Model Color</td></tr>
+    <tr>
+        <td>Mode</td>
+        <td><select data-bind="options: colorBlendModes, value: colorBlendMode"></select></td>
+    </tr>
+    <tr>
+        <td>Color</td>
+        <td><select data-bind="options: colors, value: color"></select></td>
+    </tr>
+    <tr>
+        <td>Alpha</td>
+        <td>
+            <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: alpha, valueUpdate: 'input'">
+            <input type="text" size="5" data-bind="value: alpha">
+        </td>
+    </tr>
+    <tr>
+        <td data-bind="style: { color: colorBlendAmountEnabled ? '' : 'gray'}">Mix</td>
+        <td>
+            <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: colorBlendAmount, valueUpdate: 'input', enable: colorBlendAmountEnabled">
+            <input type="text" size="5" data-bind="value: colorBlendAmount, enable: colorBlendAmountEnabled">
+        </td>
+    </tr>
+    <tr><td class="header">Model Silhouette</td></tr>
+    <tr>
+        <td>Color</td>
+        <td><select data-bind="options: silhouetteColors, value: silhouetteColor"></select></td>
+    </tr>
+    <tr>
+        <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Alpha</td>
+        <td>
+            <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: silhouetteAlpha, valueUpdate: 'input', enable: modelEnabled">
+            <input type="text" size="5" data-bind="value: silhouetteAlpha, enable: modelEnabled">
+        </td>
+    </tr>
+    <tr>
+        <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Size</td>
+        <td>
+            <input type="range" min="0.0" max="10.0" step="0.01" data-bind="value: silhouetteSize, valueUpdate: 'input', enable: modelEnabled">
+            <input type="text" size="5" data-bind="value: silhouetteSize, enable: modelEnabled">
+        </td>
+    </tr>
+    </tbody></table>
+</div>
+
+<!--We need create it dynamically-->
+<div id="shapeEditMenu"></div>
+
+<script src="js/script.js"></script>
+
 </body>
 </html>
