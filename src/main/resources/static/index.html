@@ -10,13 +10,6 @@
     <title>Cesium Container</title>
     <script src="Cesium/Build/Cesium/Cesium.js"></script>
     <script type="text/javascript" src="Cesium/Apps/Sandcastle/Sandcastle-header.js"></script>
-    <script type="text/javascript" src="Cesium/ThirdParty/requirejs-2.1.20/require.js"></script>
-    <script type="text/javascript">
-        require.config({
-            baseUrl : 'Cesium/Source',
-            waitSeconds : 60
-        });
-    </script>
     <style>
         @import url(Cesium/Build/Cesium/Widgets/widgets.css);
         @import url(Cesium/Apps/Sandcastle/templates/bucket.css);
@@ -69,41 +62,41 @@
     <tr><td class="header">Model Color</td></tr>
     <tr>
         <td>Mode</td>
-        <td><select data-bind="options: colorBlendModes, value: colorBlendMode"></select></td>
+        <td><select id="mode-model" data-bind="options: colorBlendModes, value: colorBlendMode"></select></td>
     </tr>
     <tr>
         <td>Color</td>
-        <td><select data-bind="options: colors, value: color"></select></td>
+        <td><select id="color-model" data-bind="options: colors, value: color"></select></td>
     </tr>
     <tr>
         <td>Alpha</td>
-        <td>
+        <td id="alpha-model">
             <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: alpha, valueUpdate: 'input'">
             <input type="text" size="5" data-bind="value: alpha">
         </td>
     </tr>
     <tr>
         <td data-bind="style: { color: colorBlendAmountEnabled ? '' : 'gray'}">Mix</td>
-        <td>
+        <td id="colorBlendAmount-model">
             <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: colorBlendAmount, valueUpdate: 'input', enable: colorBlendAmountEnabled">
             <input type="text" size="5" data-bind="value: colorBlendAmount, enable: colorBlendAmountEnabled">
         </td>
     </tr>
     <tr><td class="header">Model Silhouette</td></tr>
     <tr>
-        <td>Color</td>
-        <td><select data-bind="options: silhouetteColors, value: silhouetteColor"></select></td>
+        <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Color</td>
+        <td><select id="silhouetteColors-model" data-bind="options: silhouetteColors, value: silhouetteColor, enable: modelEnabled"></select></td>
     </tr>
     <tr>
         <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Alpha</td>
-        <td>
+        <td id="silhouetteAlpha-model">
             <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: silhouetteAlpha, valueUpdate: 'input', enable: modelEnabled">
             <input type="text" size="5" data-bind="value: silhouetteAlpha, enable: modelEnabled">
         </td>
     </tr>
     <tr>
         <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Size</td>
-        <td>
+        <td id="silhouetteSize-model">
             <input type="range" min="0.0" max="10.0" step="0.01" data-bind="value: silhouetteSize, valueUpdate: 'input', enable: modelEnabled">
             <input type="text" size="5" data-bind="value: silhouetteSize, enable: modelEnabled">
         </td>

@@ -18,7 +18,7 @@ function getColor(colorName, alpha) {
 
 var viewModel = {
     color : 'Red',
-    colors : ['White', 'Red', 'Green', 'Blue', 'Yellow', 'Gray'],
+    colors : ['Red', 'White', 'Green', 'Blue', 'Yellow', 'Gray'],
     alpha : 1.0,
     colorBlendMode : 'Highlight',
     colorBlendModes : ['Highlight', 'Replace', 'Mix'],
@@ -45,6 +45,7 @@ Cesium.knockout.getObservable(viewModel, 'color').subscribe(
             entity.point.color = getColor(newValue, viewModel.alpha);
         else
             entity.model.color = getColor(newValue, viewModel.alpha);
+        entity.color_model = newValue;
     }
 );
 
@@ -54,6 +55,7 @@ Cesium.knockout.getObservable(viewModel, 'alpha').subscribe(
             entity.point.color = getColor(viewModel.color, newValue);
         else
             entity.model.color = getColor(viewModel.color, newValue);
+        entity.alpha_model = newValue;
     }
 );
 
@@ -62,30 +64,35 @@ Cesium.knockout.getObservable(viewModel, 'colorBlendMode').subscribe(
         var colorBlendMode = getColorBlendMode(newValue);
         entity.model.colorBlendMode = colorBlendMode;
         viewModel.colorBlendAmountEnabled = (colorBlendMode === Cesium.ColorBlendMode.MIX);
+        entity.colorBlendMode_model = newValue;
     }
 );
 
 Cesium.knockout.getObservable(viewModel, 'colorBlendAmount').subscribe(
     function(newValue) {
         entity.model.colorBlendAmount = parseFloat(newValue);
+        entity.colorBlendAmount_model = newValue;
     }
 );
 
 Cesium.knockout.getObservable(viewModel, 'silhouetteColor').subscribe(
     function(newValue) {
         entity.model.silhouetteColor = getColor(newValue, viewModel.silhouetteAlpha);
+        entity.silhouetteColor_model = newValue;
     }
 );
 
 Cesium.knockout.getObservable(viewModel, 'silhouetteAlpha').subscribe(
     function(newValue) {
         entity.model.silhouetteColor = getColor(viewModel.silhouetteColor, newValue);
+        entity.silhouetteAlpha_model = newValue;
     }
 );
 
 Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
     function(newValue) {
         entity.model.silhouetteSize = parseFloat(newValue);
+        entity.silhouetteSize_model = newValue;
     }
 );
 
@@ -124,22 +131,11 @@ var options = [ {
 }];
 
 
-function add() {
-    var select = document.getElementsByTagName("select")[3];
-    var value = select.options[select.selectedIndex].text;
-    console.log(value);
-}
-
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
-
-// Sandcastle.addToolbarButton('Add', add, 'shapeEditMenu');
-
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
 
-
-// change params
 function addEntity(Cartesian, url, isPointPrimitive = !url) {
     Sandcastle.declare(addEntity);
 
@@ -151,10 +147,13 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
 
     if (isPointPrimitive) {
         entity = viewer.entities.add({
-
             name: "point",
             position: Cartesian,
             orientation: orientation,
+
+            /* Properties for updating toolbar */
+            color_model: viewModel.color,
+            alpha_model: viewModel.alpha,
 
             point: {
                 id : generate_id(),
@@ -163,14 +162,21 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
                 scaleByDistance: new Cesium.NearFarScalar(1.5e2, 5.0, 5.5e7, 0.0),
                 translucencyByDistance: new Cesium.NearFarScalar(1.5e2, 0.5, 1.5e7, 1.0),
             }
-
         });
     } else {
         entity = viewer.entities.add({
-
             name : "model",
             position : Cartesian,
             orientation : orientation,
+
+            /* Properties for updating toolbar */
+            color_model: viewModel.color,
+            alpha_model: viewModel.alpha,
+            colorBlendMode_model: viewModel.colorBlendMode,
+            colorBlendAmount_model : viewModel.colorBlendAmount,
+            silhouetteColor_model : viewModel.silhouetteColor,
+            silhouetteAlpha_model : viewModel.silhouetteAlpha,
+            silhouetteSize_model : viewModel.silhouetteSize,
 
             model : {
                 uri : url,
@@ -183,10 +189,9 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
                 silhouetteColor : getColor(viewModel.silhouetteColor, viewModel.silhouetteAlpha),
                 silhouetteSize : parseFloat(viewModel.silhouetteSize)
             }
-
-
         });
     }
+    viewModel.modelEnabled = entity.name === "model";
 }
 
 var count = 0;
@@ -203,8 +208,7 @@ handler.setInputAction(function(e) {
     shapeEditMenu.style.display = "block";
     shapeEditMenu.style.left = e.position.x + 'px';
     shapeEditMenu.style.top = e.position.y + 'px';
-    var cartesian = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);
-    lastClickedPosition = cartesian;
+    lastClickedPosition = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);
 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
 handler.setInputAction(function() {
@@ -212,14 +216,62 @@ handler.setInputAction(function() {
     shapeEditMenu.style.display = "none";
 }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
+function setSelectedOption(id, newValue) {
+    var select = document.getElementById(id);
+    var options = select.getElementsByTagName('option');
+    for (var i = 0; i < options.length; i++) {
+        if (options[i].value === newValue) {
+            select.getElementsByTagName('option')[i].selected = 'selected';
+        }
+    }
+}
+
+function setInputValue(id, newValue) {
+    var inputs = document.getElementById(id).childNodes;
+    for (var i = 0; i < inputs.length; i++)
+        inputs[i].value = newValue;
+}
+
+
+function changeMenuValue(property, newValue) {
+    switch (property) {
+        case 'color':
+            setSelectedOption('color-model', newValue);
+            break;
+        case 'alpha':
+            setInputValue('alpha-model', newValue);
+            break;
+        case 'colorBlendMode':
+            setSelectedOption('mode-model', newValue);
+            break;
+        case 'colorBlendAmount':
+            setInputValue('colorBlendAmount-model', newValue);
+            break;
+        case 'silhouetteColor':
+            setSelectedOption('silhouetteColors-model', newValue);
+            break;
+        case 'silhouetteAlpha':
+            setInputValue('silhouetteAlpha-model', newValue);
+            break;
+        case 'silhouetteSize':
+            setInputValue('silhouetteSize-model', newValue);
+            break;
+    }
+}
+
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
-
     if (Cesium.defined(picked)) {
         var id = Cesium.defaultValue(picked.id, picked.primitive.id);
-        if (id instanceof Cesium.Entity) {
+        if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
+            for (var prop in viewModel) {
+                if (entity[prop + '_model'])
+                    changeMenuValue(prop, entity[prop + '_model']);
+            }
             viewModel.modelEnabled = entity.name === "model";
+            viewModel.colorBlendAmountEnabled = entity.name === "model" &&
+                entity.colorBlendAmount === "MIX";
         }
     }
 
