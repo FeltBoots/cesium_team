@@ -150,6 +150,12 @@ Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
 var selectBar = document.getElementById('shapeEditMenu').firstChild;
 
 Sandcastle.addToolbarButton('Delete', function() {
+    /* var picked = viewer.scene.pick(click.position);
+    if (Cesium.defined(picked)) {
+
+        var id = Cesium.defaultValue(picked.id, picked.primitive.id);
+        if (id instanceof Cesium.Entity && entity.id !== id.id) {
+            entity = id;*/
         if (Cesium.defined(entity)) {
             if (confirm("Delete dot selected?")) {
               viewer.entities.remove(entity);
