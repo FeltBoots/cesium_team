@@ -1,22 +1,11 @@
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ZGQ5ODgxYS1lNDJjLTQxYTItYTE5OS0wOGU0ZTJmZmNkOTAiLCJpZCI6NjQyMywic2NvcGVzIjpbImFzbCIsImFzciIsImFzdyIsImdjIl0sImlhdCI6MTU0NjQ4Mjc4MH0.z8QhrB2OZesuaxrmntJBykfaeMHyUXxwGXhdBCE1NT0';
 
 var viewer = new Cesium.Viewer('cesiumContainer', {
-    // infoBox : false,
-    // selectionIndicator : false,
     shadows : true,
     shouldAnimate : true
 });
 
-function getColorBlendMode(colorBlendMode) {
-    return Cesium.ColorBlendMode[colorBlendMode.toUpperCase()];
-}
-
-function getColor(colorName, alpha) {
-    var color = Cesium.Color[colorName.toUpperCase()];
-    return Cesium.Color.fromAlpha(color, parseFloat(alpha));
-}
-
-var viewModel = {
+var currViewModel = {
     color : 'Red',
     colors : ['Red', 'White', 'Green', 'Blue', 'Yellow', 'Gray'],
     alpha : 1.0,
@@ -32,69 +21,18 @@ var viewModel = {
     position : { x : 0, y : 0,  z : 0 },
 };
 
-Cesium.knockout.track(viewModel);
+Cesium.knockout.track(currViewModel);
+
+var model = Object.create(currViewModel);
+
+var entity;
+
+var lastClickedPosition;
+
+var viewModels = {};
 
 var toolbar = document.getElementById('toolbar');
 var shapeEditMenu = document.getElementById('shapeEditMenu');
-
-Cesium.knockout.applyBindings(viewModel, toolbar);
-
-Cesium.knockout.getObservable(viewModel, 'color').subscribe(
-    function(newValue) {
-        if (entity.point)
-            entity.point.color = getColor(newValue, viewModel.alpha);
-        else
-            entity.model.color = getColor(newValue, viewModel.alpha);
-        entity.color_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'alpha').subscribe(
-    function(newValue) {
-        if (entity.point)
-            entity.point.color = getColor(viewModel.color, newValue);
-        else
-            entity.model.color = getColor(viewModel.color, newValue);
-        entity.alpha_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'colorBlendMode').subscribe(
-    function(newValue) {
-        var colorBlendMode = getColorBlendMode(newValue);
-        entity.model.colorBlendMode = colorBlendMode;
-        viewModel.colorBlendAmountEnabled = (colorBlendMode === Cesium.ColorBlendMode.MIX);
-        entity.colorBlendMode_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'colorBlendAmount').subscribe(
-    function(newValue) {
-        entity.model.colorBlendAmount = parseFloat(newValue);
-        entity.colorBlendAmount_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'silhouetteColor').subscribe(
-    function(newValue) {
-        entity.model.silhouetteColor = getColor(newValue, viewModel.silhouetteAlpha);
-        entity.silhouetteColor_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'silhouetteAlpha').subscribe(
-    function(newValue) {
-        entity.model.silhouetteColor = getColor(viewModel.silhouetteColor, newValue);
-        entity.silhouetteAlpha_model = newValue;
-    }
-);
-
-Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
-    function(newValue) {
-        entity.model.silhouetteSize = parseFloat(newValue);
-        entity.silhouetteSize_model = newValue;
-    }
-);
 
 var path = '../Cesium/Apps/';
 
@@ -130,35 +68,122 @@ var options = [ {
     }
 }];
 
+function getColorBlendMode(colorBlendMode) {
+    return Cesium.ColorBlendMode[colorBlendMode.toUpperCase()];
+}
+
+function getColor(colorName, alpha) {
+    var color = Cesium.Color[colorName.toUpperCase()];
+    return Cesium.Color.fromAlpha(color, parseFloat(alpha));
+}
+
+function getNewViewModel() {
+    var a = {};
+    for(var k in model) a[k]=model[k];
+    return a;
+}
+
+function initViewModelMenu() {
+    toolbar.style.display = "block";
+}
 
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
 
+function bindViewModel(viewModel) {
+    Cesium.knockout.cleanNode(toolbar);
+    Cesium.knockout.applyBindings(viewModel, toolbar);
+
+    initViewModelMenu();
+
+    Cesium.knockout.getObservable(viewModel, 'color').subscribe(
+        function(newValue) {
+            if (entity.point)
+                entity.point.color = getColor(newValue, viewModel.alpha);
+            else
+                entity.model.color = getColor(newValue, viewModel.alpha);
+            entity.color_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'alpha').subscribe(
+        function(newValue) {
+            if (entity.point)
+                entity.point.color = getColor(viewModel.color, newValue);
+            else
+                entity.model.color = getColor(viewModel.color, newValue);
+            entity.alpha_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'colorBlendMode').subscribe(
+        function(newValue) {
+            var colorBlendMode = getColorBlendMode(newValue);
+            entity.model.colorBlendMode = colorBlendMode;
+            viewModel.colorBlendAmountEnabled = (colorBlendMode === Cesium.ColorBlendMode.MIX);
+            entity.colorBlendMode_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'colorBlendAmount').subscribe(
+        function(newValue) {
+            entity.model.colorBlendAmount = parseFloat(newValue);
+            entity.colorBlendAmount_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'silhouetteColor').subscribe(
+        function(newValue) {
+            entity.model.silhouetteColor = getColor(newValue, viewModel.silhouetteAlpha);
+            entity.silhouetteColor_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'silhouetteAlpha').subscribe(
+        function(newValue) {
+            entity.model.silhouetteColor = getColor(viewModel.silhouetteColor, newValue);
+            entity.silhouetteAlpha_model = newValue;
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
+        function(newValue) {
+            entity.model.silhouetteSize = parseFloat(newValue);
+            entity.silhouetteSize_model = newValue;
+        }
+    );
+}
+
 function addEntity(Cartesian, url, isPointPrimitive = !url) {
     Sandcastle.declare(addEntity);
 
-    var heading = Cesium.Math.toRadians(135); // for some reason
+    var heading = Cesium.Math.toRadians(135);
     var pitch = 0;
     var roll = 0;
     var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
     var orientation = Cesium.Transforms.headingPitchRollQuaternion(Cartesian, hpr);
+
+    var id = generate_id();
+    viewModels[id] = getNewViewModel();
+    currViewModel = viewModels[id];
+    Cesium.knockout.track(currViewModel);
 
     if (isPointPrimitive) {
         entity = viewer.entities.add({
             name: "point",
             position: Cartesian,
             orientation: orientation,
+            id : id,
 
             /* Properties for updating toolbar */
-            color_model: viewModel.color,
-            alpha_model: viewModel.alpha,
+            color_model: viewModels[id].color,
+            alpha_model: viewModels[id].alpha,
 
             point: {
-                id : generate_id(),
                 pixelSize: 10,
-                color: getColor(viewModel.color, viewModel.alpha),
+                color: getColor(viewModels[id].color, viewModels[id].alpha),
                 scaleByDistance: new Cesium.NearFarScalar(1.5e2, 5.0, 5.5e7, 0.0),
                 translucencyByDistance: new Cesium.NearFarScalar(1.5e2, 0.5, 1.5e7, 1.0),
             }
@@ -168,39 +193,38 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
             name : "model",
             position : Cartesian,
             orientation : orientation,
+            id : id,
 
             /* Properties for updating toolbar */
-            color_model: viewModel.color,
-            alpha_model: viewModel.alpha,
-            colorBlendMode_model: viewModel.colorBlendMode,
-            colorBlendAmount_model : viewModel.colorBlendAmount,
-            silhouetteColor_model : viewModel.silhouetteColor,
-            silhouetteAlpha_model : viewModel.silhouetteAlpha,
-            silhouetteSize_model : viewModel.silhouetteSize,
+            color_model: viewModels[id].color,
+            alpha_model: viewModels[id].alpha,
+            colorBlendMode_model: viewModels[id].colorBlendMode,
+            colorBlendAmount_model : viewModels[id].colorBlendAmount,
+            silhouetteColor_model : viewModels[id].silhouetteColor,
+            silhouetteAlpha_model : viewModels[id].silhouetteAlpha,
+            silhouetteSize_model : viewModels[id].silhouetteSize,
 
             model : {
                 uri : url,
-                id : generate_id(),
                 minimumPixelSize : 128,
                 maximumScale : 20000,
-                color : getColor(viewModel.color, viewModel.alpha),
-                colorBlendMode : getColorBlendMode(viewModel.colorBlendMode),
-                colorBlendAmount : parseFloat(viewModel.colorBlendAmount),
-                silhouetteColor : getColor(viewModel.silhouetteColor, viewModel.silhouetteAlpha),
-                silhouetteSize : parseFloat(viewModel.silhouetteSize)
+                color : getColor(viewModels[id].color, viewModels[id].alpha),
+                colorBlendMode : getColorBlendMode(viewModels[id].colorBlendMode),
+                colorBlendAmount : parseFloat(viewModels[id].colorBlendAmount),
+                silhouetteColor : getColor(viewModels[id].silhouetteColor, viewModels[id].silhouetteAlpha),
+                silhouetteSize : parseFloat(viewModels[id].silhouetteSize)
             }
         });
     }
-    viewModel.modelEnabled = entity.name === "model";
+    bindViewModel(currViewModel);
+    currViewModel.modelEnabled = entity.name === "model";
 }
 
 var count = 0;
 function generate_id() {
-    return count++;
+    return ++count;
 }
 
-var entity;
-var lastClickedPosition;
 var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
 handler.setInputAction(function(e) {
@@ -265,12 +289,13 @@ handler.setInputAction(function(click) {
         var id = Cesium.defaultValue(picked.id, picked.primitive.id);
         if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
-            for (var prop in viewModel) {
+            currViewModel = viewModels[entity.id];
+            for (var prop in currViewModel) {
                 if (entity[prop + '_model'])
                     changeMenuValue(prop, entity[prop + '_model']);
             }
-            viewModel.modelEnabled = entity.name === "model";
-            viewModel.colorBlendAmountEnabled = entity.name === "model" &&
+            currViewModel.modelEnabled = entity.name === "model";
+            currViewModel.colorBlendAmountEnabled = entity.name === "model" &&
                 entity.colorBlendAmount === "MIX";
         }
     }
