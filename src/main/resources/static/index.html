@@ -83,6 +83,13 @@
             <input type="text" size="5" data-bind="value: colorBlendAmount, enable: colorBlendAmountEnabled">
         </td>
     </tr>
+    <tr>
+        <td data-bind="style: { color: modelEnabled ? '' : 'white'}">Position</td>
+        <td id="coordinate-model">
+            <input id="latitude-model" type="text" size="5" data-bind="value: latitude">
+            <input id="longitude-model" type="text" size="5" data-bind="value: longitude">
+        </td>
+    </tr>
     <tr><td class="header">Model Silhouette</td></tr>
     <tr>
         <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Color</td>

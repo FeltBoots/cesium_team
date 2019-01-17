@@ -13,15 +13,15 @@ var currViewModel = {
     colorBlendModes : ['Highlight', 'Replace', 'Mix'],
     colorBlendAmount : 0.5,
     colorBlendAmountEnabled : false,
-    positionEnabled: false,
+    positionEnabled: true,
     modelEnabled : false,
     silhouetteColor : 'Red',
     silhouetteColors : ['Red', 'Green', 'Blue', 'Yellow', 'Gray'],
     silhouetteAlpha : 1.0,
     silhouetteSize : 2.0,
-    position : { x : 0, y : 0,  z : 0 },
-  //  longitude : 0,
-  // latitude : 0
+    position : Cesium.Cartesian3(0,0,0),
+    longitude : 0,
+    latitude : 0
 };
 
 Cesium.knockout.track(currViewModel);
@@ -30,7 +30,7 @@ var model = Object.create(currViewModel);
 
 var entity;
 
-var lastClickedPosition;
+var lastClickedPosition = Cesium.Cartesian3(0,0,0);
 
 var viewModels = {};
 
@@ -84,7 +84,7 @@ var options = [ {
 
 function chooseDefaultOptionAndShowToolbar(){
     document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
-    document.getElementById('toolbar').style.visibility = "visible";
+    toolbar.style.visibility = "visible";
 }
 
 
@@ -99,7 +99,7 @@ function getColor(colorName, alpha) {
 
 function getNewViewModel() {
     var a = {};
-    for(var k in model) a[k]=model[k];
+    for (var k in model) a[k] = model[k];
     return a;
 }
 
@@ -187,40 +187,35 @@ function bindViewModel(viewModel) {
             entity.silhouetteSize_model = newValue;
         }
     );
-    /*
-    Cesium.knockout.getObservable(viewModel, 'position').subscribe(
-    function(newValue) {
-        entity.model.position = newValue;
-        var cartographic = Cesium.Cartographic.fromCartesian(newValue);
-        entity.longitude_model = cartographic.longitude;
-        entity.longitude_model = cartographic.latitude;
-    }
-);
 
     Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
         function(newValue) {
-             if (entity.position == undefined) {
-                 entity.position = Cesium.Cartesian3(newValue, 0, 0);
-             } else {
-                 var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
-                 entity.position = Cesium.Cartesian3(newValue, cartographic.latitude, 0);
-             }
-         }
+            entity.position = Cesium.Cartesian3.fromDegrees(getLongitude(viewModel.position), newValue, 0);
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
         function(newValue) {
-            if (entity.position == undefined) {
-                entity.position = Cesium.Cartesian3(0, newValue, 0);
-            } else {
-                var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
-                entity.position = Cesium.Cartesian3(cartographic.longitude, newValue, 0);
-            }
+            entity.position = Cesium.Cartesian3.fromDegrees(newValue, getLatitude(viewModel.position), 0);
         }
-        }
-    );*/
+    );
 }
+
+getLongitude = function (position) {
+    var cartographic = Cesium.Cartographic.fromCartesian(position);
+    return cartographic.longitude.toFixed(2);
+};
+
+getLatitude = function (position) {
+    var cartographic = Cesium.Cartographic.fromCartesian(position);
+    return cartographic.latitude.toFixed(2);
+};
+
+getPosition = function (id, position) {
+    viewModels[id].position = position;
+    currViewModel.position = position;
+    return position;
+};
 
 function addEntity(Cartesian, url, isPointPrimitive) {
     isPointPrimitive = !url;
@@ -235,18 +230,23 @@ function addEntity(Cartesian, url, isPointPrimitive) {
     var id = generate_id();
     viewModels[id] = getNewViewModel();
     currViewModel = viewModels[id];
+    currViewModel.position = Cartesian;
+    currViewModel.longitude = getLongitude(Cartesian);
+    currViewModel.latitude = getLatitude(Cartesian);
     Cesium.knockout.track(currViewModel);
 
     if (isPointPrimitive) {
         entity = viewer.entities.add({
             name: "point",
-            position: Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
+            position: getPosition(id, Cartesian),
             orientation: orientation,
             id : id,
 
             /* Properties for updating toolbar */
             color_model: viewModels[id].color,
             alpha_model: viewModels[id].alpha,
+            longitude_model : getLongitude(viewModels[id].position),
+            latitude_model : getLatitude(viewModels[id].position),
 
             point: {
                 pixelSize: 10,
@@ -258,7 +258,7 @@ function addEntity(Cartesian, url, isPointPrimitive) {
     } else {
         entity = viewer.entities.add({
             name : "model",
-            position : Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
+            position : getPosition(id, Cartesian),
             orientation : orientation,
             id : id,
 
@@ -270,8 +270,8 @@ function addEntity(Cartesian, url, isPointPrimitive) {
             silhouetteColor_model : viewModels[id].silhouetteColor,
             silhouetteAlpha_model : viewModels[id].silhouetteAlpha,
             silhouetteSize_model : viewModels[id].silhouetteSize,
-            /*longitude_model : viewModel.longitude,
-            latitude_model : viewModel.latitude,*/
+            longitude_model : getLongitude(viewModels[id].position),
+            latitude_model : getLatitude(viewModels[id].position),
 
             model : {
                 uri : url,
@@ -282,8 +282,6 @@ function addEntity(Cartesian, url, isPointPrimitive) {
                 colorBlendAmount : parseFloat(viewModels[id].colorBlendAmount),
                 silhouetteColor : getColor(viewModels[id].silhouetteColor, viewModels[id].silhouetteAlpha),
                 silhouetteSize : parseFloat(viewModels[id].silhouetteSize),
-                /*longitude : viewModel.longitude,
-                latitude : viewModel.latitude,*/
             }
         });
     }
@@ -327,8 +325,21 @@ function setInputValue(id, newValue) {
         inputs[i].value = newValue;
 }
 
+function setPositionValue(id, newValue) {
+    var input = document.getElementById(id);
+    var cartographic = Cesium.Cartographic.fromCartesian(newValue);
+    switch (id) {
+        case 'longitude-model':
+            input.value = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+            break;
+        case 'latitude-model':
+            input.value = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+            break;
+    }
+}
 
 function changeMenuValue(property, newValue) {
+    console.log("here");
     switch (property) {
         case 'color':
             setSelectedOption('color-model', newValue);
@@ -351,19 +362,19 @@ function changeMenuValue(property, newValue) {
         case 'silhouetteSize':
             setInputValue('silhouetteSize-model', newValue);
             break;
-        /*case 'longitude':
+        case 'longitude':
             setPositionValue('longitude-model', newValue);
             break;
         case 'latitude':
             setPositionValue('latitude-model', newValue);
-            break;*/
+            break;
     }
 }
 
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
     if (Cesium.defined(picked)) {
-        document.getElementById('toolbar').style.visibility = "visible";
+        toolbar.style.visibility = "visible";
         var id = Cesium.defaultValue(picked.id, picked.primitive.id);
         if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
@@ -377,7 +388,7 @@ handler.setInputAction(function(click) {
                 entity.colorBlendAmount === "MIX";
         }
     } else {
-        document.getElementById('toolbar').style.visibility = "hidden";
+        toolbar.style.visibility = "hidden";
     }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
