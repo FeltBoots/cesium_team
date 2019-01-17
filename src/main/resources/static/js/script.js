@@ -363,6 +363,7 @@ function changeMenuValue(property, newValue) {
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
     if (Cesium.defined(picked)) {
+        document.getElementById('toolbar').style.visibility = "visible";
         var id = Cesium.defaultValue(picked.id, picked.primitive.id);
         if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
@@ -375,7 +376,8 @@ handler.setInputAction(function(click) {
             currViewModel.colorBlendAmountEnabled = entity.name === "model" &&
                 entity.colorBlendAmount === "MIX";
         }
+    } else {
+        document.getElementById('toolbar').style.visibility = "hidden";
     }
-
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
