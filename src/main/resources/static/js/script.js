@@ -24,6 +24,7 @@ var viewModel = {
     colorBlendModes : ['Highlight', 'Replace', 'Mix'],
     colorBlendAmount : 0.5,
     colorBlendAmountEnabled : false,
+    positionEnabled: false,
     modelEnabled : false,
     silhouetteColor : 'Red',
     silhouetteColors : ['Red', 'Green', 'Blue', 'Yellow', 'Gray'],
@@ -100,44 +101,35 @@ Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
 
 Cesium.knockout.getObservable(viewModel, 'position').subscribe(
     function(newValue) {
-        entity.model.position = newValue;
-        entity.longitude_model = newValue.x;
-        entity.longitude_model = newValue.y;
+        /*entity.model.position = newValue;
+        var cartographic = Cesium.Cartographic.fromCartesian(newValue);
+        entity.longitude_model = cartographic.longitude;
+        entity.longitude_model = cartographic.latitude;*/
     }
 );
 
 Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
     function(newValue) {
-        if (entity.model != undefined) {
-            if (entity.model.position == undefined) {
-                entity.model.position = Cesium.Cartesian3(newValue, 0, 0);
-            } else
-                entity.model.position.x = newValue;
-            entity.longitude_model = newValue;
-        } else {
-            if (entity.position == undefined) {
+           /* if (entity.position == undefined) {
                 entity.position = Cesium.Cartesian3(newValue, 0, 0);
-            } else
-                entity.position.x = newValue;
-        }
-    }
+            } else {
+                var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
+                entity.position = Cesium.Cartesian3(newValue, cartographic.latitude, 0);
+            }
+        }*/
+
 );
 
 Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
     function(newValue) {
-        if (entity.model != undefined) {
-            if (entity.model.position == undefined) {
-                entity.model.position = Cesium.Cartesian3(0, newValue, 0);
-            } else
-                entity.model.position.y = newValue;
-            entity.latitude_model = newValue;
-        } else {
-            if (entity.position == undefined) {
+            /*if (entity.position == undefined) {
                 entity.position = Cesium.Cartesian3(0, newValue, 0);
-            } else
-                entity.position.y = newValue;
-        }
-    }
+            } else {
+                var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
+                entity.position = Cesium.Cartesian3(cartographic.longitude, newValue, 0);
+            }
+        }*/
+
 );
 
 var path = '../Cesium/Apps/';
@@ -224,8 +216,8 @@ function addEntity(Cartesian, url, isPointPrimitive) {
     if (isPointPrimitive) {
         entity = viewer.entities.add({
             name: "point",
-            position: Cartesian,
-            orientation: orientation,
+            position: Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
+            //: orientation,
 
             /* Properties for updating toolbar */
             color_model: viewModel.color,
@@ -242,7 +234,7 @@ function addEntity(Cartesian, url, isPointPrimitive) {
     } else {
         entity = viewer.entities.add({
             name : "model",
-            position : viewModel,
+            position: Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
             orientation : orientation,
 
             /* Properties for updating toolbar */
@@ -253,8 +245,8 @@ function addEntity(Cartesian, url, isPointPrimitive) {
             silhouetteColor_model : viewModel.silhouetteColor,
             silhouetteAlpha_model : viewModel.silhouetteAlpha,
             silhouetteSize_model : viewModel.silhouetteSize,
-            longitude_model : viewModel.longitude,
-            latitude_model : viewModel.longitude,
+            /*longitude_model : viewModel.longitude,
+            latitude_model : viewModel.latitude,*/
 
             model : {
                 uri : url,
@@ -265,11 +257,14 @@ function addEntity(Cartesian, url, isPointPrimitive) {
                 colorBlendMode : getColorBlendMode(viewModel.colorBlendMode),
                 colorBlendAmount : parseFloat(viewModel.colorBlendAmount),
                 silhouetteColor : getColor(viewModel.silhouetteColor, viewModel.silhouetteAlpha),
-                silhouetteSize : parseFloat(viewModel.silhouetteSize)
+                silhouetteSize : parseFloat(viewModel.silhouetteSize),
+                /*longitude : viewModel.longitude,
+                latitude : viewModel.latitude,*/
             }
         });
     }
     viewModel.modelEnabled = entity.name === "model";
+    viewModel.positionEnabled = entity.name !== "model";
 }
 
 var count = 0;
@@ -287,6 +282,9 @@ handler.setInputAction(function(e) {
     shapeEditMenu.style.left = e.position.x + 'px';
     shapeEditMenu.style.top = e.position.y + 'px';
     lastClickedPosition = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);
+    var cartographic = Cesium.Cartographic.fromCartesian(lastClickedPosition);
+    viewModel.longitude = cartographic.longitude;
+    viewModel.latitude = cartographic.latitude;
 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
 handler.setInputAction(function() {
@@ -314,10 +312,10 @@ function setPositionValue(id, newValue) {
     var input = document.getElementById(id);
     switch (id) {
         case 'longitude-model':
-            input.value = viewModel.longitude;
+            input.value = newValue;
             break;
         case 'latitude-model':
-            input.value = viewModel.latitude;
+            input.value = newValue;
             break;
     }
 }
@@ -356,10 +354,9 @@ function changeMenuValue(property, newValue) {
 
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
-    var cartographic = Cesium.Cartographic.fromCartesian(Cesium);
-    viewModel.longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
-    console.log(Cesium.Math.toDegrees(cartographic.longitude).toFixed(2));
-    viewModel.latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+    var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid));
+    viewModel.longitude = cartographic.longitude;
+    viewModel.latitude = cartographic.latitude;
     if (Cesium.defined(picked)) {
         document.getElementById('toolbar').style.visibility = "visible";
 
