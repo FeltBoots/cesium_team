@@ -27,7 +27,7 @@
             background: rgba(42, 42, 42, 0.8);
             padding: 4px;
             border-radius: 4px;
-            min-width: 310px;
+            /*display: none;*/
         }
 
         #toolbar input {
@@ -43,6 +43,7 @@
             position: absolute;
             display: none;
 
+            /*top: 80px;*/
             height: 65px;
             width: 165px;
 
@@ -80,6 +81,13 @@
         <td id="colorBlendAmount-model">
             <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: colorBlendAmount, valueUpdate: 'input', enable: colorBlendAmountEnabled">
             <input type="text" size="5" data-bind="value: colorBlendAmount, enable: colorBlendAmountEnabled">
+        </td>
+    </tr>
+    <tr>
+        <td data-bind="style: { color: modelEnabled ? '' : 'gray'}">Position</td>
+        <td id="coordinate-model">
+            <input id="longitude-model" type="text" size="5" data-bind="value: longitude, enable: modelEnabled">
+            <input id="latitude-model" type="text" size="5" data-bind="value: latitude, enable: modelEnabled">
         </td>
     </tr>
     <tr><td class="header">Model Silhouette</td></tr>

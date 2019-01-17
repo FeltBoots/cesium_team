@@ -30,6 +30,8 @@ var viewModel = {
     silhouetteAlpha : 1.0,
     silhouetteSize : 2.0,
     position : { x : 0, y : 0,  z : 0 },
+    longitude : 0,
+    latitude : 0
 };
 
 Cesium.knockout.track(viewModel);
@@ -96,6 +98,48 @@ Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
     }
 );
 
+Cesium.knockout.getObservable(viewModel, 'position').subscribe(
+    function(newValue) {
+        entity.model.position = newValue;
+        entity.longitude_model = newValue.x;
+        entity.longitude_model = newValue.y;
+    }
+);
+
+Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
+    function(newValue) {
+        if (entity.model != undefined) {
+            if (entity.model.position == undefined) {
+                entity.model.position = Cesium.Cartesian3(newValue, 0, 0);
+            } else
+                entity.model.position.x = newValue;
+            entity.longitude_model = newValue;
+        } else {
+            if (entity.position == undefined) {
+                entity.position = Cesium.Cartesian3(newValue, 0, 0);
+            } else
+                entity.position.x = newValue;
+        }
+    }
+);
+
+Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
+    function(newValue) {
+        if (entity.model != undefined) {
+            if (entity.model.position == undefined) {
+                entity.model.position = Cesium.Cartesian3(0, newValue, 0);
+            } else
+                entity.model.position.y = newValue;
+            entity.latitude_model = newValue;
+        } else {
+            if (entity.position == undefined) {
+                entity.position = Cesium.Cartesian3(0, newValue, 0);
+            } else
+                entity.position.y = newValue;
+        }
+    }
+);
+
 var path = '../Cesium/Apps/';
 
 var options = [ {
@@ -142,24 +186,17 @@ var options = [ {
 }];
 
 function chooseDefaultOptionAndShowToolbar(){
-    selectBar.selectedIndex = "0";
+    document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
     document.getElementById('toolbar').style.visibility = "visible";
 }
 
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
-var selectBar = document.getElementById('shapeEditMenu').firstChild;
 
-Sandcastle.addToolbarButton('Delete', function(click) {
-        console.log("here");
-    /* var picked = viewer.scene.pick(click.position);
-    if (Cesium.defined(picked)) {
+//var selectBar = document.getElementById('shapeEditMenu').firstChild;
 
-        var id = Cesium.defaultValue(picked.id, picked.primitive.id);
-        if (id instanceof Cesium.Entity && entity.id !== id.id) {
-            entity = id;*/
+Sandcastle.addToolbarButton('Delete', function() {
         if (Cesium.defined(entity)) {
-            //console.log("here2");
-            if (confirm("Delete dot?")) {
+            if (confirm("Delete dot selected?")) {
               viewer.entities.remove(entity);
               if (viewer.entities.values.length > 0) {
                   entity = viewer.entities.values[0];
@@ -175,7 +212,8 @@ Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
 
-function addEntity(Cartesian, url, isPointPrimitive = !url) {
+function addEntity(Cartesian, url, isPointPrimitive) {
+    isPointPrimitive = !url;
     Sandcastle.declare(addEntity);
 
     var heading = Cesium.Math.toRadians(135); // for some reason
@@ -183,7 +221,6 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
     var roll = 0;
     var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
     var orientation = Cesium.Transforms.headingPitchRollQuaternion(Cartesian, hpr);
-
     if (isPointPrimitive) {
         entity = viewer.entities.add({
             name: "point",
@@ -205,7 +242,7 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
     } else {
         entity = viewer.entities.add({
             name : "model",
-            position : Cartesian,
+            position : viewModel,
             orientation : orientation,
 
             /* Properties for updating toolbar */
@@ -216,6 +253,8 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
             silhouetteColor_model : viewModel.silhouetteColor,
             silhouetteAlpha_model : viewModel.silhouetteAlpha,
             silhouetteSize_model : viewModel.silhouetteSize,
+            longitude_model : viewModel.longitude,
+            latitude_model : viewModel.longitude,
 
             model : {
                 uri : url,
@@ -271,6 +310,17 @@ function setInputValue(id, newValue) {
         inputs[i].value = newValue;
 }
 
+function setPositionValue(id, newValue) {
+    var input = document.getElementById(id);
+    switch (id) {
+        case 'longitude-model':
+            input.value = viewModel.longitude;
+            break;
+        case 'latitude-model':
+            input.value = viewModel.latitude;
+            break;
+    }
+}
 
 function changeMenuValue(property, newValue) {
     switch (property) {
@@ -295,29 +345,40 @@ function changeMenuValue(property, newValue) {
         case 'silhouetteSize':
             setInputValue('silhouetteSize-model', newValue);
             break;
+        case 'longitude':
+            setPositionValue('longitude-model', newValue);
+            break;
+        case 'latitude':
+            setPositionValue('latitude-model', newValue);
+            break;
     }
 }
 
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
+    var cartographic = Cesium.Cartographic.fromCartesian(Cesium);
+    viewModel.longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+    console.log(Cesium.Math.toDegrees(cartographic.longitude).toFixed(2));
+    viewModel.latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
     if (Cesium.defined(picked)) {
         document.getElementById('toolbar').style.visibility = "visible";
-        if (viewer.entities.values.length > 0 && entity === undefined) {
-            entity = viewer.entities.values[0];
-            var id = Cesium.defaultValue(picked.id, picked.primitive.id);
-            if (id instanceof Cesium.Entity && entity.id !== id.id) {
-                entity = id;
-                for (var prop in viewModel) {
-                    if (entity[prop + '_model'])
-                        changeMenuValue(prop, entity[prop + '_model']);
-                }
-                viewModel.modelEnabled = entity.name === "model";
-                viewModel.colorBlendAmountEnabled = entity.name === "model" &&
-                    entity.colorBlendAmount === "MIX";
+
+        var id = Cesium.defaultValue(picked.id, picked.primitive.id);
+        if (id instanceof Cesium.Entity && entity.id !== id.id) {
+            entity = id;
+            console.log('here');
+
+            for (var prop in viewModel) {
+                if (entity[prop + '_model'])
+                    changeMenuValue(prop, entity[prop + '_model']);
             }
-        } else {
-            entity = undefined;
-            document.getElementById('toolbar').style.visibility = "hidden";
+            viewModel.modelEnabled = entity.name === "model";
+            viewModel.colorBlendAmountEnabled = entity.name === "model" &&
+                entity.colorBlendAmount === "MIX";
         }
+    } else {
+        document.getElementById('toolbar').style.visibility = "hidden";
     }
+
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
