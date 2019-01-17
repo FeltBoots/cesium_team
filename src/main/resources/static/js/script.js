@@ -13,12 +13,15 @@ var currViewModel = {
     colorBlendModes : ['Highlight', 'Replace', 'Mix'],
     colorBlendAmount : 0.5,
     colorBlendAmountEnabled : false,
+    positionEnabled: false,
     modelEnabled : false,
     silhouetteColor : 'Red',
     silhouetteColors : ['Red', 'Green', 'Blue', 'Yellow', 'Gray'],
     silhouetteAlpha : 1.0,
     silhouetteSize : 2.0,
     position : { x : 0, y : 0,  z : 0 },
+  //  longitude : 0,
+  // latitude : 0
 };
 
 Cesium.knockout.track(currViewModel);
@@ -37,36 +40,53 @@ var shapeEditMenu = document.getElementById('shapeEditMenu');
 var path = '../Cesium/Apps/';
 
 var options = [ {
+    text : 'default',
+    onselect : function () {
+        //...
+    }
+}, {
     text : 'Aircraft',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumAir/Cesium_Air.glb');
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Ground Vehicle',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/GroundVehicle/GroundVehicle.glb');
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Hot Air Balloon',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumBalloon/CesiumBalloon.glb');
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Milk Truck',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMilkTruck/CesiumMilkTruck-kmc.glb');
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'Skinned Character',
     onselect : function() {
         addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMan/Cesium_Man.glb');
+        chooseDefaultOptionAndShowToolbar();
     }
 }, {
     text : 'point',
     onselect : function() {
         addEntity(lastClickedPosition);
+        chooseDefaultOptionAndShowToolbar();
     }
 }];
+
+function chooseDefaultOptionAndShowToolbar(){
+    document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+    document.getElementById('toolbar').style.visibility = "visible";
+}
+
 
 function getColorBlendMode(colorBlendMode) {
     return Cesium.ColorBlendMode[colorBlendMode.toUpperCase()];
@@ -88,6 +108,19 @@ function initViewModelMenu() {
 }
 
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
+Sandcastle.addToolbarButton('Delete', function() {
+        if (Cesium.defined(entity)) {
+            if (confirm("Delete dot selected?")) {
+                viewer.entities.remove(entity);
+                if (viewer.entities.values.length > 0) {
+                    entity = viewer.entities.values[0];
+                } else {
+                    entity = undefined;
+                }
+            }
+        }
+    }
+    , 'shapeEditMenu');
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
@@ -99,7 +132,7 @@ function bindViewModel(viewModel) {
     initViewModelMenu();
 
     Cesium.knockout.getObservable(viewModel, 'color').subscribe(
-        function(newValue) {
+        function (newValue) {
             if (entity.point)
                 entity.point.color = getColor(newValue, viewModel.alpha);
             else
@@ -109,7 +142,7 @@ function bindViewModel(viewModel) {
     );
 
     Cesium.knockout.getObservable(viewModel, 'alpha').subscribe(
-        function(newValue) {
+        function (newValue) {
             if (entity.point)
                 entity.point.color = getColor(viewModel.color, newValue);
             else
@@ -119,7 +152,7 @@ function bindViewModel(viewModel) {
     );
 
     Cesium.knockout.getObservable(viewModel, 'colorBlendMode').subscribe(
-        function(newValue) {
+        function (newValue) {
             var colorBlendMode = getColorBlendMode(newValue);
             entity.model.colorBlendMode = colorBlendMode;
             viewModel.colorBlendAmountEnabled = (colorBlendMode === Cesium.ColorBlendMode.MIX);
@@ -128,35 +161,69 @@ function bindViewModel(viewModel) {
     );
 
     Cesium.knockout.getObservable(viewModel, 'colorBlendAmount').subscribe(
-        function(newValue) {
+        function (newValue) {
             entity.model.colorBlendAmount = parseFloat(newValue);
             entity.colorBlendAmount_model = newValue;
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'silhouetteColor').subscribe(
-        function(newValue) {
+        function (newValue) {
             entity.model.silhouetteColor = getColor(newValue, viewModel.silhouetteAlpha);
             entity.silhouetteColor_model = newValue;
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'silhouetteAlpha').subscribe(
-        function(newValue) {
+        function (newValue) {
             entity.model.silhouetteColor = getColor(viewModel.silhouetteColor, newValue);
             entity.silhouetteAlpha_model = newValue;
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'silhouetteSize').subscribe(
-        function(newValue) {
+        function (newValue) {
             entity.model.silhouetteSize = parseFloat(newValue);
             entity.silhouetteSize_model = newValue;
         }
     );
+    /*
+    Cesium.knockout.getObservable(viewModel, 'position').subscribe(
+    function(newValue) {
+        entity.model.position = newValue;
+        var cartographic = Cesium.Cartographic.fromCartesian(newValue);
+        entity.longitude_model = cartographic.longitude;
+        entity.longitude_model = cartographic.latitude;
+    }
+);
+
+    Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
+        function(newValue) {
+             if (entity.position == undefined) {
+                 entity.position = Cesium.Cartesian3(newValue, 0, 0);
+             } else {
+                 var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
+                 entity.position = Cesium.Cartesian3(newValue, cartographic.latitude, 0);
+             }
+         }
+        }
+    );
+
+    Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
+        function(newValue) {
+            if (entity.position == undefined) {
+                entity.position = Cesium.Cartesian3(0, newValue, 0);
+            } else {
+                var cartographic = Cesium.Cartographic.fromCartesian(viewer.camera.pickEllipsoid(entity.position, viewer.scene.globe.ellipsoid));
+                entity.position = Cesium.Cartesian3(cartographic.longitude, newValue, 0);
+            }
+        }
+        }
+    );*/
 }
 
-function addEntity(Cartesian, url, isPointPrimitive = !url) {
+function addEntity(Cartesian, url, isPointPrimitive) {
+    isPointPrimitive = !url;
     Sandcastle.declare(addEntity);
 
     var heading = Cesium.Math.toRadians(135);
@@ -173,7 +240,7 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
     if (isPointPrimitive) {
         entity = viewer.entities.add({
             name: "point",
-            position: Cartesian,
+            position: Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
             orientation: orientation,
             id : id,
 
@@ -191,7 +258,7 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
     } else {
         entity = viewer.entities.add({
             name : "model",
-            position : Cartesian,
+            position : Cartesian,//Cesium.Cartesian3.fromDegrees(viewModel.longitude, viewModel.latitude, 0),
             orientation : orientation,
             id : id,
 
@@ -203,6 +270,8 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
             silhouetteColor_model : viewModels[id].silhouetteColor,
             silhouetteAlpha_model : viewModels[id].silhouetteAlpha,
             silhouetteSize_model : viewModels[id].silhouetteSize,
+            /*longitude_model : viewModel.longitude,
+            latitude_model : viewModel.latitude,*/
 
             model : {
                 uri : url,
@@ -212,7 +281,9 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
                 colorBlendMode : getColorBlendMode(viewModels[id].colorBlendMode),
                 colorBlendAmount : parseFloat(viewModels[id].colorBlendAmount),
                 silhouetteColor : getColor(viewModels[id].silhouetteColor, viewModels[id].silhouetteAlpha),
-                silhouetteSize : parseFloat(viewModels[id].silhouetteSize)
+                silhouetteSize : parseFloat(viewModels[id].silhouetteSize),
+                /*longitude : viewModel.longitude,
+                latitude : viewModel.latitude,*/
             }
         });
     }
@@ -280,6 +351,12 @@ function changeMenuValue(property, newValue) {
         case 'silhouetteSize':
             setInputValue('silhouetteSize-model', newValue);
             break;
+        /*case 'longitude':
+            setPositionValue('longitude-model', newValue);
+            break;
+        case 'latitude':
+            setPositionValue('latitude-model', newValue);
+            break;*/
     }
 }
 
