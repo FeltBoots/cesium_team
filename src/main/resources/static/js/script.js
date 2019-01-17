@@ -142,11 +142,33 @@ var options = [ {
 }];
 
 function chooseDefaultOptionAndShowToolbar(){
-    document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
+    selectBar.selectedIndex = "0";
     document.getElementById('toolbar').style.visibility = "visible";
 }
 
 Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
+var selectBar = document.getElementById('shapeEditMenu').firstChild;
+
+Sandcastle.addToolbarButton('Delete', function() {
+    /* var picked = viewer.scene.pick(click.position);
+    if (Cesium.defined(picked)) {
+
+        var id = Cesium.defaultValue(picked.id, picked.primitive.id);
+        if (id instanceof Cesium.Entity && entity.id !== id.id) {
+            entity = id;*/
+        if (Cesium.defined(entity)) {
+            if (confirm("Delete dot selected?")) {
+              viewer.entities.remove(entity);
+              if (viewer.entities.values.length > 0) {
+                  entity = viewer.entities.values[0];
+              } else {
+                  entity = undefined;
+              }
+            }
+        }
+    }
+    , 'shapeEditMenu');
+
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
@@ -278,23 +300,22 @@ handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
     if (Cesium.defined(picked)) {
         document.getElementById('toolbar').style.visibility = "visible";
-
-        var id = Cesium.defaultValue(picked.id, picked.primitive.id);
-        if (id instanceof Cesium.Entity && entity.id !== id.id) {
-            entity = id;
-            console.log('here');
-
-            for (var prop in viewModel) {
-                if (entity[prop + '_model'])
-                    changeMenuValue(prop, entity[prop + '_model']);
+        if (viewer.entities.values.length > 0 && entity === undefined) {
+            entity = viewer.entities.values[0];
+            var id = Cesium.defaultValue(picked.id, picked.primitive.id);
+            if (id instanceof Cesium.Entity && entity.id !== id.id) {
+                entity = id;
+                for (var prop in viewModel) {
+                    if (entity[prop + '_model'])
+                        changeMenuValue(prop, entity[prop + '_model']);
+                }
+                viewModel.modelEnabled = entity.name === "model";
+                viewModel.colorBlendAmountEnabled = entity.name === "model" &&
+                    entity.colorBlendAmount === "MIX";
             }
-            viewModel.modelEnabled = entity.name === "model";
-            viewModel.colorBlendAmountEnabled = entity.name === "model" &&
-                entity.colorBlendAmount === "MIX";
+        } else {
+            entity = undefined;
+            document.getElementById('toolbar').style.visibility = "hidden";
         }
-    } else {
-        document.getElementById('toolbar').style.visibility = "hidden";
     }
-
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
