@@ -47,44 +47,50 @@ var options = [ {
 }, {
     text : 'Aircraft',
     onselect : function() {
-        addEntity(lastClickedPosition, path + '/SampleData/models/CesiumAir/Cesium_Air.glb');
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition, path + '/SampleData/models/CesiumAir/Cesium_Air.glb');
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }, {
     text : 'Ground Vehicle',
     onselect : function() {
-        addEntity(lastClickedPosition, path + '/SampleData/models/GroundVehicle/GroundVehicle.glb');
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition, path + '/SampleData/models/GroundVehicle/GroundVehicle.glb');
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }, {
     text : 'Hot Air Balloon',
     onselect : function() {
-        addEntity(lastClickedPosition, path + '/SampleData/models/CesiumBalloon/CesiumBalloon.glb');
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition, path + '/SampleData/models/CesiumBalloon/CesiumBalloon.glb');
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }, {
     text : 'Milk Truck',
     onselect : function() {
-        addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMilkTruck/CesiumMilkTruck-kmc.glb');
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMilkTruck/CesiumMilkTruck-kmc.glb');
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }, {
     text : 'Skinned Character',
     onselect : function() {
-        addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMan/Cesium_Man.glb');
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition, path + '/SampleData/models/CesiumMan/Cesium_Man.glb');
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }, {
     text : 'point',
     onselect : function() {
-        addEntity(lastClickedPosition);
-        chooseDefaultOptionAndShowToolbar();
+        var id = addEntity(lastClickedPosition);
+        chooseDefaultOptionAndShowToolbar(id);
     }
 }];
 
-function chooseDefaultOptionAndShowToolbar(){
+function chooseDefaultOptionAndShowToolbar(id){
     document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
     toolbar.style.visibility = "visible";
+    currViewModel = viewModels[entity.id];
+    for (var prop in currViewModel) {
+        if (entity[prop + '_model'])
+            changeMenuValue(prop, entity[prop + '_model']);
+    }
+
 }
 
 
@@ -190,25 +196,31 @@ function bindViewModel(viewModel) {
 
     Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
         function(newValue) {
-            entity.position = Cesium.Cartesian3.fromDegrees(getLongitude(viewModel.position), newValue, 0);
+            entity.position = Cesium.Cartesian3.fromDegrees(newValue, Cesium.Math.toDegrees(getLatitude(viewModel.position)), 0);
+            //var cartographic = Cesium.Cartographic.fromCartesian(entity.position);
+            entity.longitude_model = Cesium.Math.toRadians(newValue);//cartographic.longitude;
+            entity.model.position = entity.position;
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
         function(newValue) {
-            entity.position = Cesium.Cartesian3.fromDegrees(newValue, getLatitude(viewModel.position), 0);
+            entity.position = Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(getLongitude(viewModel.position)), newValue, 0);
+            //var cartographic = Cesium.Cartographic.fromCartesian(entity.position);
+            entity.latitude_model = Cesium.Math.toRadians(newValue);//cartographic.latitude;
+            entity.model.position = entity.position;
         }
     );
 }
 
 getLongitude = function (position) {
     var cartographic = Cesium.Cartographic.fromCartesian(position);
-    return cartographic.longitude.toFixed(2);
+    return cartographic.longitude;//.toFixed(2);
 };
 
 getLatitude = function (position) {
     var cartographic = Cesium.Cartographic.fromCartesian(position);
-    return cartographic.latitude.toFixed(2);
+    return cartographic.latitude;//.toFixed(2);
 };
 
 getPosition = function (id, position) {
@@ -252,7 +264,7 @@ function addEntity(Cartesian, url, isPointPrimitive) {
                 pixelSize: 10,
                 color: getColor(viewModels[id].color, viewModels[id].alpha),
                 scaleByDistance: new Cesium.NearFarScalar(1.5e2, 5.0, 5.5e7, 0.0),
-                translucencyByDistance: new Cesium.NearFarScalar(1.5e2, 0.5, 1.5e7, 1.0),
+                translucencyByDistance: new Cesium.NearFarScalar(1.5e2, 0.5, 1.5e7, 1.0)
             }
         });
     } else {
@@ -277,16 +289,18 @@ function addEntity(Cartesian, url, isPointPrimitive) {
                 uri : url,
                 minimumPixelSize : 128,
                 maximumScale : 20000,
+                position : Cartesian,
                 color : getColor(viewModels[id].color, viewModels[id].alpha),
                 colorBlendMode : getColorBlendMode(viewModels[id].colorBlendMode),
                 colorBlendAmount : parseFloat(viewModels[id].colorBlendAmount),
                 silhouetteColor : getColor(viewModels[id].silhouetteColor, viewModels[id].silhouetteAlpha),
-                silhouetteSize : parseFloat(viewModels[id].silhouetteSize),
+                silhouetteSize : parseFloat(viewModels[id].silhouetteSize)
             }
         });
     }
     bindViewModel(currViewModel);
     currViewModel.modelEnabled = entity.name === "model";
+    return id;
 }
 
 var count = 0;
@@ -327,13 +341,13 @@ function setInputValue(id, newValue) {
 
 function setPositionValue(id, newValue) {
     var input = document.getElementById(id);
-    var cartographic = Cesium.Cartographic.fromCartesian(newValue);
+    /*var cartographic = Cesium.Cartographic.fromCartesian(newValue);*/
     switch (id) {
         case 'longitude-model':
-            input.value = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2);
+            input.value = Cesium.Math.toDegrees(newValue).toFixed(4);
             break;
         case 'latitude-model':
-            input.value = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2);
+            input.value = Cesium.Math.toDegrees(newValue).toFixed(4);
             break;
     }
 }
