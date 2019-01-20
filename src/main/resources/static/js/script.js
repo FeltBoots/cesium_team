@@ -20,8 +20,8 @@ var currViewModel = {
     silhouetteAlpha : 1.0,
     silhouetteSize : 2.0,
     position : Cesium.Cartesian3(0,0,0),
-    longitude : 0,
-    latitude : 0
+    longitude : Cesium.Math.toRadians(0),
+    latitude : Cesium.Math.toRadians(0)
 };
 
 Cesium.knockout.track(currViewModel);
@@ -85,12 +85,11 @@ var options = [ {
 function chooseDefaultOptionAndShowToolbar(id){
     document.getElementById('shapeEditMenu').firstChild.selectedIndex = "0";
     toolbar.style.visibility = "visible";
-    currViewModel = viewModels[entity.id];
+    currViewModel = viewModels[id];
     for (var prop in currViewModel) {
         if (entity[prop + '_model'])
             changeMenuValue(prop, entity[prop + '_model']);
     }
-
 }
 
 
@@ -196,31 +195,31 @@ function bindViewModel(viewModel) {
 
     Cesium.knockout.getObservable(viewModel, 'longitude').subscribe(
         function(newValue) {
-            entity.position = Cesium.Cartesian3.fromDegrees(newValue, Cesium.Math.toDegrees(getLatitude(viewModel.position)), 0);
-            //var cartographic = Cesium.Cartographic.fromCartesian(entity.position);
-            entity.longitude_model = Cesium.Math.toRadians(newValue);//cartographic.longitude;
-            entity.model.position = entity.position;
+            entity.position = Cesium.Cartesian3.fromRadians(Cesium.Math.toRadians(newValue), entity.latitude_model);
+            entity.longitude_model = Cesium.Math.toRadians(newValue);
+            if (viewModel.modelEnabled)
+                entity.model.position = entity.position;
         }
     );
 
     Cesium.knockout.getObservable(viewModel, 'latitude').subscribe(
         function(newValue) {
-            entity.position = Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(getLongitude(viewModel.position)), newValue, 0);
-            //var cartographic = Cesium.Cartographic.fromCartesian(entity.position);
-            entity.latitude_model = Cesium.Math.toRadians(newValue);//cartographic.latitude;
-            entity.model.position = entity.position;
+            entity.position = Cesium.Cartesian3.fromRadians(entity.longitude_model, Cesium.Math.toRadians(newValue));
+            entity.latitude_model = Cesium.Math.toRadians(newValue);
+            if (viewModel.modelEnabled)
+                entity.model.position = entity.position;
         }
     );
 }
 
 getLongitude = function (position) {
-    var cartographic = Cesium.Cartographic.fromCartesian(position);
-    return cartographic.longitude;//.toFixed(2);
+    var cartographic =Cesium.Cartographic.fromCartesian(position);
+    return cartographic.longitude;
 };
 
 getLatitude = function (position) {
     var cartographic = Cesium.Cartographic.fromCartesian(position);
-    return cartographic.latitude;//.toFixed(2);
+    return cartographic.latitude;
 };
 
 getPosition = function (id, position) {
@@ -242,9 +241,6 @@ function addEntity(Cartesian, url, isPointPrimitive) {
     var id = generate_id();
     viewModels[id] = getNewViewModel();
     currViewModel = viewModels[id];
-    currViewModel.position = Cartesian;
-    currViewModel.longitude = getLongitude(Cartesian);
-    currViewModel.latitude = getLatitude(Cartesian);
     Cesium.knockout.track(currViewModel);
 
     if (isPointPrimitive) {
