@@ -23,12 +23,15 @@ var currViewModel = {
 
 Cesium.knockout.track(currViewModel);
 
+// Template for creation of a clone
 var model = Object.create(currViewModel);
 
+// Save current picked entity
 var entity;
 
 var lastClickedPosition;
 
+// Map for view models, every entity has it's own view model
 var viewModels = {};
 
 var toolbar = document.getElementById('toolbar');
@@ -77,6 +80,8 @@ function getColor(colorName, alpha) {
     return Cesium.Color.fromAlpha(color, parseFloat(alpha));
 }
 
+/* Create object to clone */
+
 function getNewViewModel() {
     var a = {};
     for(var k in model) a[k]=model[k];
@@ -91,6 +96,8 @@ Sandcastle.addToolbarMenu(options, 'shapeEditMenu');
 Sandcastle.addToggleButton('Shadows', viewer.shadows, function(checked) {
     viewer.shadows = checked;
 });
+
+/* Bind new view model to display correct data */
 
 function bindViewModel(viewModel) {
     Cesium.knockout.cleanNode(toolbar);
@@ -156,6 +163,8 @@ function bindViewModel(viewModel) {
     );
 }
 
+/* Create new entity */
+
 function addEntity(Cartesian, url, isPointPrimitive = !url) {
     Sandcastle.declare(addEntity);
 
@@ -166,6 +175,11 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
     var orientation = Cesium.Transforms.headingPitchRollQuaternion(Cartesian, hpr);
 
     var id = generate_id();
+
+    /* Put new view model, we need create it from init template of ViewModel
+    *  Then set correct properties to display it
+    * */
+
     viewModels[id] = getNewViewModel();
     currViewModel = viewModels[id];
     Cesium.knockout.track(currViewModel);
@@ -216,9 +230,12 @@ function addEntity(Cartesian, url, isPointPrimitive = !url) {
             }
         });
     }
+    /* Bind model after creation */
     bindViewModel(currViewModel);
     currViewModel.modelEnabled = entity.name === "model";
 }
+
+/* Generate ids */
 
 var count = 0;
 function generate_id() {
@@ -227,6 +244,8 @@ function generate_id() {
 
 var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
+/* Pick current position and show models menu to pick entity */
+
 handler.setInputAction(function(e) {
     var shapeEditMenu = document.getElementById("shapeEditMenu");
     shapeEditMenu.style.display = "block";
@@ -234,6 +253,8 @@ handler.setInputAction(function(e) {
     shapeEditMenu.style.top = e.position.y + 'px';
     lastClickedPosition = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);
 }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+/* Hide menu */
 
 handler.setInputAction(function() {
     var shapeEditMenu = document.getElementById("shapeEditMenu");
@@ -256,6 +277,7 @@ function setInputValue(id, newValue) {
         inputs[i].value = newValue;
 }
 
+/* Set correct values to DOM object */
 
 function changeMenuValue(property, newValue) {
     switch (property) {
@@ -283,6 +305,8 @@ function changeMenuValue(property, newValue) {
     }
 }
 
+/* Change entity to picked and change view model to picked */
+
 handler.setInputAction(function(click) {
     var picked = viewer.scene.pick(click.position);
     if (Cesium.defined(picked)) {
@@ -290,6 +314,9 @@ handler.setInputAction(function(click) {
         if (id instanceof Cesium.Entity && entity.id !== id.id) {
             entity = id;
             currViewModel = viewModels[entity.id];
+
+            /* Set properties from entity to view model and to display correct entity's data */
+
             for (var prop in currViewModel) {
                 if (entity[prop + '_model'])
                     changeMenuValue(prop, entity[prop + '_model']);
